@@ -1,48 +1,43 @@
 """
-Database Schemas
+Database Schemas for BlueFlame Tasks
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection. The collection name is the
+lowercased class name. Example: class User -> collection "user".
 """
-
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
+from typing import Optional, List
+from pydantic import BaseModel, Field, EmailStr
 
 class User(BaseModel):
     """
     Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Collection: "user"
     """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr = Field(..., description="Unique email address")
+    password_hash: str = Field(..., description="BCrypt password hash")
+    username: str = Field(..., min_length=3, max_length=24, description="Unique public username")
+    display_name: str = Field(..., min_length=1, max_length=60)
+    bio: Optional[str] = Field(None, max_length=280)
+    avatar_url: Optional[str] = None
+    is_public: bool = Field(default=False, description="Whether profile and tasks are public")
+    theme: str = Field(default="blueflame", description="Theme preference")
 
-class Product(BaseModel):
+class Task(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Tasks collection schema
+    Collection: "task"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    user_id: str = Field(..., description="Owner user id (stringified ObjectId)")
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    completed: bool = Field(default=False)
+    order: int = Field(default=0, description="Ordering index for drag & drop")
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Additional models used for responses/requests (not collections)
+class PublicProfile(BaseModel):
+    username: str
+    display_name: str
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_public: bool = True
+    theme: str = "blueflame"
+    tasks: List[dict] = []
